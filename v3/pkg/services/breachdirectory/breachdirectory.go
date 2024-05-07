@@ -8,8 +8,8 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"strings"
-
 	"github.com/alpkeskin/mosint/v3/internal/config"
 	"github.com/alpkeskin/mosint/v3/internal/spinner"
 	"github.com/fatih/color"
@@ -24,7 +24,8 @@ type BreachDirectoryResponse struct {
 	Found   int  `json:"found"`
 	Result  []struct {
 		HasPassword bool     `json:"has_password"`
-		Sources     []string `json:"sources"`
+		HashPassword bool    `json:"hash_password"`
+		Sources     string   `json:"sources,omitempty"`
 		Password    string   `json:"password,omitempty"`
 		Sha1        string   `json:"sha1,omitempty"`
 		Hash        string   `json:"hash,omitempty"`
@@ -46,7 +47,8 @@ func (b *BreachDirectory) Lookup(email string) {
 		return
 	}
 
-	url := fmt.Sprintf("https://breachdirectory.p.rapidapi.com/?func=auto&term=%s", email)
+	url := fmt.Sprintf("https://breachdirectory.p.rapidapi.com/?func=auto&term=%s", url.QueryEscape(email))
+	//url := fmt.Sprintf("http://localhost:4000/test")
 
 	req, err := http.NewRequest("GET", url, nil)
 
@@ -56,6 +58,7 @@ func (b *BreachDirectory) Lookup(email string) {
 		return
 	}
 
+    //req.Header.Add("x-rapidapi-host", "localhost:4000")
 	req.Header.Add("x-rapidapi-host", "breachdirectory.p.rapidapi.com")
 	req.Header.Add("x-rapidapi-key", key)
 
@@ -103,10 +106,8 @@ func (b *BreachDirectory) Print() {
 
 	fmt.Println("[*] Breached Sources and Passwords")
 	for _, v := range b.Response.Result {
-		for _, v2 := range v.Sources {
-			fmt.Println(color.GreenString("[+]"), v2)
-		}
-		if v.HasPassword {
+		fmt.Println(color.GreenString("[+]"), v.Sources)
+		if (v.HasPassword || v.HashPassword){
 			fmt.Println("[*] Password")
 			fmt.Println(color.GreenString("[+]"), v.Password)
 			fmt.Println(color.GreenString("[+]"), v.Sha1)
